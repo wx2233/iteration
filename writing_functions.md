@@ -188,3 +188,55 @@ mean_and_sd(input_x = y)
     ##    mean    sd
     ##   <dbl> <dbl>
     ## 1  4.03 0.288
+
+``` r
+sim_data  = tibble(
+  x = rnorm(30, mean = 1, sd = 1),
+  y = 2 + 3 * x + rnorm(30, 0, 1)
+)
+
+sim_data %>% 
+  ggplot(aes(x = x, y = y)) +
+  geom_point()
+```
+
+<img src="writing_functions_files/figure-gfm/unnamed-chunk-8-1.png" width="90%" />
+
+``` r
+ls_fit = lm(y ~ x, data = sim_data)
+
+beta0_hat = coef(ls_fit)[1]
+beta_hat = coef(ls_fit)[2]
+```
+
+``` r
+sim_regression = function(n, beta0 = 2, beta1 =3){
+  
+  sim_data  = tibble(
+  x = rnorm(n, mean = 1, sd = 1),
+  y = beta0 + beta1 * x + rnorm(n, 0, 1)
+)
+  ls_fit = lm(y ~ x, data = sim_data)
+
+  tibble(
+  beta0_hat = coef(ls_fit)[1],
+  beta_hat = coef(ls_fit)[2]
+  )
+}
+
+sim_regression(n = 3000 ,beta0 = 17, beta1 = -3)
+```
+
+    ## # A tibble: 1 x 2
+    ##   beta0_hat beta_hat
+    ##       <dbl>    <dbl>
+    ## 1      17.0    -3.03
+
+``` r
+sim_regression(n = 3000, beta0 = 17)  #use default.
+```
+
+    ## # A tibble: 1 x 2
+    ##   beta0_hat beta_hat
+    ##       <dbl>    <dbl>
+    ## 1      17.0     3.01
