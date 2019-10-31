@@ -45,3 +45,157 @@ sim_regression = function(n, beta0 = 2, beta1 = 3) {
 }
 ```
 
+
+
+```{r}
+output = vector("list", 1500)
+
+for (i in 1:500) {
+  output[[i]] = sim_regression(30)
+}
+
+sim_results = bind_rows(output) #bindrows for list?
+
+bind_rows(output) %>% 
+  ggplot(aes(x = beta0_hat)) +
+  geom_density()
+```
+
+## rerun instead loop
+```{r}
+sim_results = 
+  rerun(500, sim_regression(30, 2, 3)) %>%  ## rerun
+  bind_rows()
+
+sim_results %>% 
+  ggplot(aes(x = beta0_hat, y = beta1_hat)) + 
+  geom_point()
+```
+
+```{r}
+sim_data = tibble(
+  x = rnorm(30,1,1),
+  y = 2 + 3 * x + rnorm(30,0,1)
+)
+
+sim_data %>% 
+  ggplot(aes(x = x, y = y)) +
+  geom_point() +
+  stat_smooth(method = "lm",se = FALSE)
+```
+
+
+
+```{r}
+#mean and var
+sim_results %>% 
+  gather(key = parameter, value = estimate, beta0_hat:beta1_hat) %>% 
+  group_by(parameter) %>% 
+  summarize(emp_mean = mean(estimate), 
+            emp_var = var(estimate)) %>% 
+  knitr::kable(digits = 3)
+
+#use pivot
+sim_results %>% 
+  pivot_longer(
+    beta0_hat:beta1_hat,
+    names_to = "parameter",
+    values_to = "estimate"
+  ) %>% 
+  group_by(parameter) %>% 
+  summarize(emp_mean = mean(estimate), 
+            emp_var = var(estimate)) %>% 
+  knitr::kable(digits = 3)
+```
+
+## try another
+
+```{r}
+n_list = list(
+  "n_30" = 30,
+  "n_60" = 60,
+  "n_120" = 120,
+  "n_240" = 240
+ )
+
+output = vector("list",length = 4)
+
+for (i in 1:4) {
+  output[[i]] = rerun(100, sim_regression(n_list[[i]])) %>% 
+    bind_rows
+}
+
+output
+```
+
+
+
+```{r}
+sim_results = 
+  tibble(n = c(30, 60, 120, 240)) %>% 
+  mutate(
+    output_list = map(.x = n, ~rerun(10,sim_regression(n = .x)))
+  ) %>% 
+  unnest
+
+sim_results
+```
+
+```{r}
+simulate_n_regressions = function(n_runs = 100, n, beta0 = 2, beta1 = 3) {
+  
+  rerun(n_runs, sim_regression(n, beta0, beta1)) %>% 
+    bind_rows()
+  
+}
+
+sim_results = 
+  tibble(sample_size = c(30, 60, 120, 240)) %>% 
+  mutate(estimate_dfs = map(.x = sample_size, ~simulate_n_regressions(n = .x))) %>% 
+  unnest
+```
+
+
+
+```{r}
+
+sim_results = 
+  tibble(sample_size = c(30, 60, 120, 240)) %>% 
+  mutate(
+    output_list  = map(.x = sample_size, ~rerun(100,sim_regression(n = .x))),
+    output_df = map(output_list,bind_rows)) %>% 
+  select(-output_list) %>% 
+  unnest
+```
+
+
+```{r}
+sim_results %>% 
+  group_by(sample_size) %>% 
+  summarize(
+    var_b1 = var(beta1_hat)
+  )
+```
+
+
+
+
+```{r}
+sim_results %>% 
+  mutate(
+    sample_size = str_c("n = ", sample_size),
+    sample_size = fct_inorder(sample_size)) %>% 
+  ggplot(aes(x = sample_size, y = beta1_hat, fill = sample_size)) + 
+  geom_violin()
+```
+
+```{r}
+sim_results %>% 
+  mutate(
+    sample_size = str_c("n = ", sample_size),
+    sample_size = fct_inorder(sample_size)) %>% 
+  ggplot(aes(x = beta0_hat, y = beta1_hat)) + 
+  geom_point(alpha = .2) + 
+  facet_grid(~sample_size)
+```
+
